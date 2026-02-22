@@ -1,1 +1,36 @@
 @import "tailwindcss";
+
+:root {
+  --b-movie-red: #cc0000;
+  --b-movie-yellow: #ffcc00;
+  --b-movie-black: #050505;
+}
+
+body {
+  background-color: var(--b-movie-black);
+  margin: 0;
+  padding: 0;
+  overflow: hidden;
+}
+
+@layer utilities {
+  .text-shadow-b {
+    text-shadow: 4px 4px 0px var(--b-movie-red), 8px 8px 0px rgba(0,0,0,0.5);
+  }
+}
+
+@keyframes flicker {
+  0% { opacity: 0.97; }
+  5% { opacity: 0.95; }
+  10% { opacity: 0.98; }
+  15% { opacity: 0.94; }
+  20% { opacity: 0.99; }
+  25% { opacity: 0.96; }
+  30% { opacity: 1; }
+  35% { opacity: 0.93; }
+  100% { opacity: 1; }
+}
+
+.film-flicker {
+  animation: flicker 0.15s infinite;
+}
