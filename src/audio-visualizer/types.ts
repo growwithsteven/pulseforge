@@ -10,10 +10,11 @@ export type PresetName = "calm" | "standard" | "club";
 
 export type AudioVisualizerProps = {
 	audioSrc: string;
+	imageSrc: string;
+	artistName: string;
+	trackName: string;
 	barCount: number;
 	baseColor: string;
 	glowColor: string;
-	minRadius: number;
-	maxRadius: number;
 	controls?: PulseForgeControls;
 };

@@ -3,16 +3,6 @@ name: PulseForge
 description: >
   Create and run PulseForge audio-visualization renders with a strict input gate.
 
-  BOOTSTRAP MODE - Triggers: "Create a PulseForge video", "Set up PulseForge",
-  "Generate an audio visualizer", "Render MP3 with PulseForge"
-  -> Verifies audio source, collects 5 required control values (1-10),
-  validates inputs, and runs Remotion render.
-
-  ITERATION MODE - Triggers: "Tune PulseForge style", "Adjust PulseForge controls",
-  "Update preset behavior", "Improve visual intensity"
-  -> Loads existing settings, asks targeted control adjustments,
-  rerenders with updated values, and summarizes differences.
-
   Use when users want a CLI-first plugin workflow for Remotion-based audio visualization,
   with explicit user-defined control values before render starts.
 ---
@@ -35,23 +25,29 @@ This skill has two modes:
 
 Use when: User wants to render a new PulseForge output from an audio file.
 
-### Phase 1: Input and File Validation
+### Phase 1: Input Requirements
 
-**Step 1: Confirm required audio path**
+**Step 1: Collect Required Assets and Text**
 
-Require `--audio <path>` and verify the file exists.
+You MUST collect the following 4 pieces of information from the user before proceeding:
+1. **Audio Path** (`--audio`): The path to the MP3/WAV file. Verify the file exists.
+2. **Image Path** (`--image`): The path to the background image. Verify the file exists.
+3. **Artist Name** (`--artist`): **MANDATORY.** You must ask the user for the artist name.
+4. **Track Name** (`--track`): **MANDATORY.** You must ask the user for the track title.
 
-Example:
+Do not start generating until you have explicitly asked the user for all of the above and received their input.
+
+If the audio or image file is outside `input/`, they will be automatically copied into `input/.vj-imports/` by the generator script.
+
+Example CLI usage:
 
 ```bash
-npm run pulseforge:generate -- --audio public/Froggy!.mp3 --out out/froggy-pulseforge.mp4
+npm run pulseforge:generate -- --audio input/Froggy!.mp3 --image input/frog-bg.png --artist "LIL FROG" --track "JUMP" --out output/froggy-pulseforge.mp4
 ```
-
-If the audio file is outside `public/`, copy it into `public/.vj-imports/` and use the copied path for rendering.
 
 **Step 2: Confirm optional render settings**
 
-- `--out` is optional; default to `out/audio-visualizer.mp4`
+- `--out` is optional; default to `output/audio-visualizer.mp4`
 - `--preset` is optional; default to `standard`
 - Valid presets: `calm`, `standard`, `club`
 
@@ -162,7 +158,7 @@ Controls hue rotation speed and color movement.
 - FPS: `30`
 - Resolution: `1920x1080`
 - Default preset: `standard`
-- Default output: `out/audio-visualizer.mp4`
+- Default output: `output/audio-visualizer.mp4`
 
 ---
 
@@ -171,6 +167,8 @@ Controls hue rotation speed and color movement.
 Before delivering output, verify:
 
 - [ ] Audio path exists and is readable
+- [ ] Image path exists and is readable
+- [ ] Artist Name and Track Name are explicitly asked and provided by the user
 - [ ] Preset is valid (`calm|standard|club`)
 - [ ] All five controls are integers in `1..10`
 - [ ] Render does not start before successful validation

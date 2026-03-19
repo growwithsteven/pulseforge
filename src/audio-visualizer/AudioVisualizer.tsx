@@ -1,23 +1,27 @@
 import { Audio } from "@remotion/media";
 import { useAudioData } from "@remotion/media-utils";
 import React from "react";
-import { AbsoluteFill, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
-import { average, clamp } from "./math";
+import { AbsoluteFill, Img, staticFile, useCurrentFrame, useVideoConfig } from "remotion";
+import { clamp } from "./math";
 import type { AudioVisualizerProps } from "./types";
 import { useAudioFft } from "./useAudioFft";
 
 export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
 	audioSrc,
+	imageSrc,
+	artistName,
+	trackName,
 	barCount,
 	baseColor,
 	glowColor,
-	minRadius,
-	maxRadius,
+	controls,
 }) => {
 	const frame = useCurrentFrame();
-	const { width, height, fps } = useVideoConfig();
-	const resolvedSrc = staticFile(audioSrc);
-	const audioData = useAudioData(resolvedSrc);
+	const { width, fps } = useVideoConfig();
+	const resolvedAudioSrc = staticFile(audioSrc);
+	const resolvedImageSrc = staticFile(imageSrc);
+	const audioData = useAudioData(resolvedAudioSrc);
+
 	const bars = useAudioFft({
 		audioData,
 		frame,
@@ -25,90 +29,124 @@ export const AudioVisualizer: React.FC<AudioVisualizerProps> = ({
 		numberOfSamples: barCount,
 	});
 
-	const centerX = width / 2;
-	const centerY = height / 2;
-	const barWidth = 8;
-	const lowEnd = average(bars.slice(0, Math.max(8, Math.floor(barCount * 0.08))));
-	const pulse = 1 + lowEnd * 0.06;
+	const barWidth = 6;
+	const barGap = 6;
+	const totalVisualizerWidth = barCount * (barWidth + barGap);
+	const startX = (width - totalVisualizerWidth) / 2;
+
+	// Default multipliers based on the controls
+	const energy = controls?.energy ?? 5; // 1-10
+	const heightMultiplier = (energy / 5) * 200; // Base max height 200px
 
 	return (
-		<AbsoluteFill
-			style={{
-				background:
-					"radial-gradient(circle at 50% 35%, #0f2b3b 0%, #091722 46%, #04070f 100%)",
-				overflow: "hidden",
-			}}
-		>
-			<Audio src={resolvedSrc} />
+		<AbsoluteFill style={{ overflow: "hidden", backgroundColor: "#000" }}>
+			<Audio src={resolvedAudioSrc} />
+
+			{/* Backdrop Layer */}
+			<AbsoluteFill>
+				<Img
+					src={resolvedImageSrc}
+					style={{
+						width: '100%',
+						height: '100%',
+						objectFit: 'contain',
+					}}
+				/>
+				{/* Dark Overlay for Text/Visualizer Contrast */}
+				<AbsoluteFill style={{ backgroundColor: "rgba(0, 0, 0, 0.4)" }} />
+			</AbsoluteFill>
+
+			{/* Centered Content Container */}
 			<div
 				style={{
 					position: "absolute",
-					inset: 0,
-					transform: `scale(${pulse})`,
+					top: "50%",
+					left: startX,
+					transform: "translateY(-50%)",
+					display: "flex",
+					flexDirection: "column",
+					gap: 40, // Space between visualizer and text
+					zIndex: 10,
 				}}
 			>
-				{bars.map((sample, i) => {
-					const angle = (i / barCount) * Math.PI * 2;
-					const normalized = clamp(sample, 0, 1);
-					const barLength = Math.max(6, normalized * (maxRadius - minRadius));
-					const radius = minRadius + barLength / 2;
-					const x = centerX + Math.cos(angle) * radius;
-					const y = centerY + Math.sin(angle) * radius;
-					const deg = (angle * 180) / Math.PI + 90;
-					const opacity = 0.28 + normalized * 0.72;
+				{/* Audio Reactivity Layer */}
+				<div
+					style={{
+						display: "flex",
+						gap: barGap,
+						alignItems: "flex-end", // Align bars to the bottom of the visualizer container
+						height: heightMultiplier + 20, // Buffer
+					}}
+				>
+					{bars.map((sample, i) => {
+						// Add a little smooth wave effect based on position
+						const normalized = clamp(sample, 0, 1);
+						const barHeight = Math.max(4, normalized * heightMultiplier);
 
-					return (
-						<div
-							key={i}
-							style={{
-								position: "absolute",
-								left: x - barWidth / 2,
-								top: y - barLength / 2,
-								width: barWidth,
-								height: barLength,
-								background: `linear-gradient(to top, ${baseColor}, ${glowColor})`,
-								borderRadius: 999,
-								transform: `rotate(${deg}deg)`,
-								opacity,
-								boxShadow: `0 0 ${8 + normalized * 14}px ${glowColor}`,
-							}}
-						/>
-					);
-				})}
+						return (
+							<div
+								key={i}
+								style={{
+									width: barWidth,
+									height: barHeight,
+									backgroundColor: baseColor,
+									borderRadius: 2,
+									boxShadow: `0 0 ${4 + normalized * 8}px ${glowColor}`,
+									opacity: 0.8 + normalized * 0.2,
+								}}
+							/>
+						);
+					})}
+				</div>
+
+				{/* Typography Layer */}
+				<div
+					style={{
+						display: "flex",
+						flexDirection: "column",
+						color: "#ffffff",
+						fontFamily: "'Inter', 'Montserrat', 'Helvetica Neue', Helvetica, set-sans, Arial, sans-serif",
+					}}
+				>
+					<h1 style={{
+						margin: 0,
+						fontSize: 80,
+						fontWeight: 800,
+						lineHeight: 1,
+						textTransform: "uppercase",
+						textShadow: "0 4px 12px rgba(0,0,0,0.5)"
+					}}>
+						{artistName}
+					</h1>
+					<h2 style={{
+						margin: 0,
+						fontSize: 40,
+						fontWeight: 400,
+						marginTop: 8,
+						textShadow: "0 2px 8px rgba(0,0,0,0.5)"
+					}}>
+						{trackName}
+					</h2>
+				</div>
 			</div>
 
-			<div
-				style={{
-					position: "absolute",
-					left: centerX - 126,
-					top: centerY - 126,
-					width: 252,
-					height: 252,
-					borderRadius: "50%",
-					background: `radial-gradient(circle, ${glowColor}66 0%, ${glowColor}18 45%, transparent 70%)`,
-					filter: "blur(2px)",
-				}}
-			/>
-
+			{/* Loading State Overlay */}
 			{audioData ? null : (
 				<div
 					style={{
 						position: "absolute",
 						bottom: 64,
 						left: 64,
-						right: 64,
 						padding: "16px 20px",
 						border: "1px solid rgba(255,255,255,0.24)",
 						borderRadius: 12,
-						backgroundColor: "rgba(0,0,0,0.36)",
+						backgroundColor: "rgba(0,0,0,0.6)",
 						color: "#e5e7eb",
-						fontFamily: "Arial, sans-serif",
-						fontSize: 26,
-						letterSpacing: 0.3,
+						fontFamily: "sans-serif",
+						fontSize: 20,
 					}}
 				>
-					Loading audio analysis for {audioSrc}. If this persists, ensure the file exists in
-					public/.
+					Loading audio analysis for {audioSrc}...
 				</div>
 			)}
 		</AbsoluteFill>
